@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>Proxy Browser ver17.0</title>
+  <title>Proxy Browser ver20.0</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -14,13 +14,15 @@
       background: #111;
       color: #fff;
     }
+
     header {
-      padding: 10px;
+      padding: 8px;
       background: #222;
       display: flex;
-      gap: 10px;
+      gap: 8px;
       align-items: center;
     }
+
     #urlBox {
       flex: 1;
       padding: 8px;
@@ -28,15 +30,38 @@
       border-radius: 4px;
       border: none;
     }
-    #goBtn {
-      padding: 8px 14px;
-      font-size: 15px;
-      border-radius: 4px;
+
+    button {
+      padding: 8px 12px;
       border: none;
-      background: #4caf50;
+      border-radius: 4px;
+      background: #444;
       color: #fff;
       cursor: pointer;
     }
+    button:hover {
+      background: #555;
+    }
+
+    #tabs {
+      display: flex;
+      background: #333;
+      padding: 4px;
+      gap: 4px;
+      overflow-x: auto;
+    }
+
+    .tab {
+      padding: 6px 10px;
+      background: #444;
+      border-radius: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .tab.active {
+      background: #4caf50;
+    }
+
     iframe {
       flex: 1;
       width: 100%;
@@ -47,44 +72,96 @@
 </head>
 <body>
 
+  <!-- タブバー -->
+  <div id="tabs"></div>
+
+  <!-- アドレスバー -->
   <header>
-    <span>URL:</span>
-    <input id="urlBox" type="text" value="https://paypayfleamarket.yahoo.co.jp/">
-    <button id="goBtn" onclick="loadPage()">表示</button>
+    <button onclick="goBack()">←</button>
+    <button onclick="goForward()">→</button>
+    <input id="urlBox" type="text" placeholder="URL を入力">
+    <button onclick="loadPage()">表示</button>
+    <button onclick="newTab()">＋</button>
   </header>
 
+  <!-- iframe -->
   <iframe
     id="viewer"
-    src="/api/proxy?url=https%3A%2F%2Fpaypayfleamarket.yahoo.co.jp%2F"
     sandbox="allow-same-origin allow-scripts"
     onload="syncUrl()"
   ></iframe>
 
   <script>
-    function loadPage() {
-      const url = document.getElementById('urlBox').value.trim();
+    let tabs = [];
+    let currentTab = -1;
+
+    function newTab(url = "https://paypayfleamarket.yahoo.co.jp/") {
+      tabs.push({ url });
+      currentTab = tabs.length - 1;
+      renderTabs();
+      loadPage(url);
+    }
+
+    function renderTabs() {
+      const tabBar = document.getElementById("tabs");
+      tabBar.innerHTML = "";
+
+      tabs.forEach((t, i) => {
+        const div = document.createElement("div");
+        div.className = "tab" + (i === currentTab ? " active" : "");
+        div.textContent = t.url.replace("https://", "").slice(0, 15);
+        div.onclick = () => switchTab(i);
+        tabBar.appendChild(div);
+      });
+    }
+
+    function switchTab(i) {
+      currentTab = i;
+      document.getElementById("viewer").src =
+        "/api/proxy?url=" + encodeURIComponent(tabs[i].url);
+      renderTabs();
+      document.getElementById("urlBox").value = tabs[i].url;
+    }
+
+    function loadPage(url) {
+      if (!url) url = document.getElementById("urlBox").value.trim();
       if (!url) return;
-      document.getElementById('viewer').src =
+
+      tabs[currentTab].url = url;
+      document.getElementById("viewer").src =
         "/api/proxy?url=" + encodeURIComponent(url);
+      renderTabs();
     }
 
+    // Enter キーで読み込み
+    document.getElementById("urlBox").addEventListener("keydown", e => {
+      if (e.key === "Enter") loadPage();
+    });
+
+    // iframe 内の URL をアドレスバーに反映
     function syncUrl() {
-      const iframe = document.getElementById('viewer');
-
+      const iframe = document.getElementById("viewer");
       try {
-        // iframe 内の現在の URL を取得
         const innerUrl = iframe.contentWindow.location.href;
-
-        // /api/proxy?url=xxxxx の xxxxx 部分を取り出す
         const urlParam = new URL(innerUrl).searchParams.get("url");
-
         if (urlParam) {
-          document.getElementById('urlBox').value = urlParam;
+          document.getElementById("urlBox").value = urlParam;
+          tabs[currentTab].url = urlParam;
+          renderTabs();
         }
-      } catch (e) {
-        console.log("URL 同期エラー:", e);
-      }
+      } catch {}
     }
+
+    // 戻る / 進む
+    function goBack() {
+      document.getElementById("viewer").contentWindow.history.back();
+    }
+    function goForward() {
+      document.getElementById("viewer").contentWindow.history.forward();
+    }
+
+    // 最初のタブ
+    newTab();
   </script>
 
 </body>
