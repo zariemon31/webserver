@@ -1,7 +1,6 @@
 export default async function handler(req, res) {
-  console.log("proxy.js ver6.0 実行");
+  console.log("proxy.js ver7.0 実行");
 
-  // URL パラメータから取得
   const targetUrl = req.query.url || "https://ja.wikipedia.org/wiki/メインページ";
 
   try {
@@ -13,19 +12,18 @@ export default async function handler(req, res) {
     });
 
     if (!response.ok) {
-      return res.status(500).send("取得に失敗しました（レスポンスエラー） ver6.0");
+      return res.status(500).send("取得に失敗しました（レスポンスエラー） ver7.0");
     }
 
-    const html = await response.text();
+    // Content-Type をそのまま返す（画像対応のため）
+    const contentType = response.headers.get("content-type");
+    res.setHeader("Content-Type", contentType);
 
-    const modifiedHtml = `
-      <!-- proxy.js ver6.0 -->
-      ${html}
-    `;
-
-    res.status(200).send(modifiedHtml);
+    // バイナリも扱えるようにする
+    const buffer = await response.arrayBuffer();
+    res.status(200).send(Buffer.from(buffer));
 
   } catch (err) {
-    res.status(500).send("取得に失敗しました（例外エラー） ver6.0");
+    res.status(500).send("取得に失敗しました（例外エラー） ver7.0");
   }
 }
