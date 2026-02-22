@@ -1,26 +1,42 @@
 let offer = null;
 let answer = null;
 
-export default async function handler(req, res) {
-  const { action } = req.query;
+let candidates_viewer = [];
+let candidates_client = [];
 
-  if (req.method === "POST") {
-    const body = JSON.parse(req.body);
+export default async function handler(req) {
+  const url = new URL(req.url);
+  const action = url.searchParams.get("action");
 
-    if (action === "offer") {
-      offer = body;
-      return res.status(200).json({ ok: true });
-    }
+  const body = req.method === "POST" ? await req.text() : null;
 
-    if (action === "answer") {
-      answer = body;
-      return res.status(200).json({ ok: true });
-    }
+  if (action === "offer") {
+    offer = JSON.parse(body);
+    answer = null;
+    candidates_viewer = [];
+    candidates_client = [];
+    return new Response("ok");
   }
 
-  if (req.method === "GET") {
-    return res.status(200).json({ offer, answer });
+  if (action === "answer") {
+    answer = JSON.parse(body);
+    return new Response("ok");
   }
 
-  res.status(405).end();
+  if (action === "candidate_viewer") {
+    candidates_viewer.push(JSON.parse(body));
+    return new Response("ok");
+  }
+
+  if (action === "candidate_client") {
+    candidates_client.push(JSON.parse(body));
+    return new Response("ok");
+  }
+
+  return Response.json({
+    offer,
+    answer,
+    candidates_viewer,
+    candidates_client
+  });
 }
