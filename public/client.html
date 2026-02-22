@@ -3,14 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <title>Remote Controller</title>
+<style>
+  body { margin:0; }
+  #remote {
+    width:100vw;
+    height:100vh;
+    background:black;
+    object-fit:contain;
+  }
+</style>
 </head>
 <body>
-<h2>Remote Controller</h2>
 
 <!-- ★ 映像が出る枠 ★ -->
-<video id="remote" autoplay playsinline style="width:100%; background:black;"></video>
+<video id="remote" autoplay playsinline></video>
 
 <!-- ★ client.js を読み込む ★ -->
 <script src="client.js"></script>
+
 </body>
 </html>
