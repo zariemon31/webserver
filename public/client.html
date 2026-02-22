@@ -2,14 +2,12 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Remote Controller</title>
+<title>Viewer</title>
 <style>
   body { margin:0; background:#111; color:white; font-family:sans-serif; }
-  #remote {
-    width:100vw;
-    height:80vh;
+  #local {
+    width:300px;
     background:black;
-    object-fit:contain;
   }
   #status {
     padding:10px;
@@ -25,12 +23,61 @@
 <div id="status">
   HTML読み込み: <span id="htmlStatus" class="ok">OK</span><br>
   JS読み込み: <span id="jsStatus" class="ng">NG</span><br>
-  WebRTC接続: <span id="rtcStatus" class="ng">NG</span><br>
-  映像受信: <span id="videoStatus" class="ng">NG</span>
+  offer送信: <span id="offerStatus" class="ng">NG</span><br>
+  answer受信: <span id="answerStatus" class="ng">NG</span><br>
+  WebRTC接続: <span id="rtcStatus" class="ng">NG</span>
 </div>
 
-<video id="remote" autoplay playsinline></video>
+<video id="local" autoplay muted></video>
 
-<script src="client.js"></script>
+<script>
+document.getElementById("jsStatus").textContent = "OK";
+document.getElementById("jsStatus").className = "ok";
+
+const pc = new RTCPeerConnection();
+const channel = pc.createDataChannel("control");
+
+pc.onconnectionstatechange = () => {
+  if (pc.connectionState === "connected") {
+    document.getElementById("rtcStatus").textContent = "OK";
+    document.getElementById("rtcStatus").className = "ok";
+  }
+};
+
+async function start() {
+  const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+  document.getElementById("local").srcObject = stream;
+  stream.getTracks().forEach(t => pc.addTrack(t, stream));
+
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+
+  await fetch("/api/signal?action=offer", {
+    method: "POST",
+    body: JSON.stringify(offer)
+  });
+
+  document.getElementById("offerStatus").textContent = "OK";
+  document.getElementById("offerStatus").className = "ok";
+
+  // ★ answer を待つ
+  const waitAnswer = async () => {
+    const res = await fetch("/api/signal");
+    const data = await res.json();
+
+    if (data.answer) {
+      await pc.setRemoteDescription(data.answer);
+      document.getElementById("answerStatus").textContent = "OK";
+      document.getElementById("answerStatus").className = "ok";
+    } else {
+      requestAnimationFrame(waitAnswer);
+    }
+  };
+
+  waitAnswer();
+}
+
+start();
+</script>
 </body>
 </html>
