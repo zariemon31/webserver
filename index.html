@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>Proxy Browser stable</title>
+  <title>Proxy Browser ver17.0</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -37,9 +37,6 @@
       color: #fff;
       cursor: pointer;
     }
-    #goBtn:hover {
-      background: #43a047;
-    }
     iframe {
       flex: 1;
       width: 100%;
@@ -52,12 +49,7 @@
 
   <header>
     <span>URL:</span>
-    <input
-      id="urlBox"
-      type="text"
-      value="https://paypayfleamarket.yahoo.co.jp/"
-      placeholder="https://paypayfleamarket.yahoo.co.jp/ など"
-    >
+    <input id="urlBox" type="text" value="https://paypayfleamarket.yahoo.co.jp/">
     <button id="goBtn" onclick="loadPage()">表示</button>
   </header>
 
@@ -65,17 +57,33 @@
     id="viewer"
     src="/api/proxy?url=https%3A%2F%2Fpaypayfleamarket.yahoo.co.jp%2F"
     sandbox="allow-same-origin allow-scripts"
+    onload="syncUrl()"
   ></iframe>
 
   <script>
     function loadPage() {
       const url = document.getElementById('urlBox').value.trim();
-      if (!url) {
-        alert("URL を入力してください");
-        return;
-      }
+      if (!url) return;
       document.getElementById('viewer').src =
         "/api/proxy?url=" + encodeURIComponent(url);
+    }
+
+    function syncUrl() {
+      const iframe = document.getElementById('viewer');
+
+      try {
+        // iframe 内の現在の URL を取得
+        const innerUrl = iframe.contentWindow.location.href;
+
+        // /api/proxy?url=xxxxx の xxxxx 部分を取り出す
+        const urlParam = new URL(innerUrl).searchParams.get("url");
+
+        if (urlParam) {
+          document.getElementById('urlBox').value = urlParam;
+        }
+      } catch (e) {
+        console.log("URL 同期エラー:", e);
+      }
     }
   </script>
 
