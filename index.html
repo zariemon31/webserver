@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>Proxy Browser ver11.0</title>
+  <title>Proxy Browser ver12.0</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -55,16 +55,16 @@
     <input
       id="urlBox"
       type="text"
-      value="https://www.yahoo.co.jp/"
-      placeholder="https://www.yahoo.co.jp/ など"
+      value="https://paypayfleamarket.yahoo.co.jp/"
+      placeholder="https://paypayfleamarket.yahoo.co.jp/ など"
     >
     <button id="goBtn" onclick="loadPage()">表示</button>
   </header>
 
-  <!-- Yahoo検索が安定する sandbox 設定 -->
+  <!-- Yahoo系が最も安定する sandbox 設定 -->
   <iframe
     id="viewer"
-    src="/api/proxy?url=https%3A%2F%2Fwww.yahoo.co.jp%2F"
+    src="/api/proxy?url=https%3A%2F%2Fpaypayfleamarket.yahoo.co.jp%2F"
     sandbox="allow-same-origin allow-scripts"
   ></iframe>
 
