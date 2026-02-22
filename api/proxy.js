@@ -1,12 +1,12 @@
 export default async function handler(req, res) {
-  const targetUrl = req.query.url || "https://paypayfleamarket.yahoo.co.jp/";
-  console.log("proxy.js ver12.0:", targetUrl);
+  const targetUrl = req.query.url || "https://www.yahoo.co.jp/";
+  console.log("proxy.js ver13.0:", targetUrl);
 
   let urlObj;
   try {
     urlObj = new URL(targetUrl);
   } catch (e) {
-    return res.status(400).send("不正な URL です ver12.0");
+    return res.status(400).send("不正な URL です ver13.0");
   }
 
   try {
@@ -18,13 +18,13 @@ export default async function handler(req, res) {
     });
 
     if (!response.ok) {
-      return res.status(500).send("取得に失敗しました（レスポンスエラー） ver12.0");
+      return res.status(500).send("取得に失敗しました（レスポンスエラー） ver13.0");
     }
 
     const contentType = response.headers.get("content-type") || "";
     res.setHeader("Content-Type", contentType);
 
-    // HTML 以外はそのまま返す（画像・CSS・JS）
+    // HTML 以外はそのまま返す
     if (!contentType.includes("text/html")) {
       const buffer = await response.arrayBuffer();
       return res.status(200).send(Buffer.from(buffer));
@@ -34,7 +34,15 @@ export default async function handler(req, res) {
     const origin = urlObj.origin;
 
     // -------------------------
-    // ① 通常の相対リンク href="/xxx"
+    // ① Yahoo検索フォームの action を書き換え
+    // -------------------------
+    html = html.replace(/<form([^>]*?)action="\/([^"]*)"/g, (m, before, path) => {
+      const abs = origin + "/" + path;
+      return `<form${before}action="/api/proxy?url=${encodeURIComponent(abs)}"`;
+    });
+
+    // -------------------------
+    // ② 通常の相対リンク href="/xxx"
     // -------------------------
     html = html.replace(/href="\/([^"]*)"/g, (m, path) => {
       const abs = origin + "/" + path;
@@ -42,7 +50,7 @@ export default async function handler(req, res) {
     });
 
     // -------------------------
-    // ② プロトコル省略 href="//xxx"
+    // ③ プロトコル省略 href="//xxx"
     // -------------------------
     html = html.replace(/href="\/\/([^"]*)"/g, (m, host) => {
       const abs = "https://" + host;
@@ -50,7 +58,7 @@ export default async function handler(req, res) {
     });
 
     // -------------------------
-    // ③ 絶対URL href="https://xxx"
+    // ④ 絶対URL href="https://xxx"
     // -------------------------
     html = html.replace(/href="https?:\/\/([^"]*)"/g, (m) => {
       const url = m.slice(6, -1);
@@ -58,7 +66,7 @@ export default async function handler(req, res) {
     });
 
     // -------------------------
-    // ④ onclick="location.href='/xxx'"
+    // ⑤ onclick="location.href='/xxx'"
     // -------------------------
     html = html.replace(/location\.href='\/([^']*)'/g, (m, path) => {
       const abs = origin + "/" + path;
@@ -66,7 +74,7 @@ export default async function handler(req, res) {
     });
 
     // -------------------------
-    // ⑤ data-href="/xxx"
+    // ⑥ data-href="/xxx"
     // -------------------------
     html = html.replace(/data-href="\/([^"]*)"/g, (m, path) => {
       const abs = origin + "/" + path;
@@ -74,23 +82,23 @@ export default async function handler(req, res) {
     });
 
     // -------------------------
-    // ⑥ 画像 src="/xxx"
+    // ⑦ 画像 src="/xxx"
     // -------------------------
     html = html.replace(/src="\/([^"]*)"/g, (m, path) => {
       return `src="${origin}/${path}"`;
     });
 
     // -------------------------
-    // ⑦ 画像 src="//xxx"
+    // ⑧ 画像 src="//xxx"
     // -------------------------
     html = html.replace(/src="\/\/([^"]*)"/g, (m, host) => {
       return `src="https://${host}"`;
     });
 
-    res.status(200).send(`<!-- proxy.js ver12.0 -->\n${html}`);
+    res.status(200).send(`<!-- proxy.js ver13.0 -->\n${html}`);
 
   } catch (err) {
     console.error(err);
-    res.status(500).send("取得に失敗しました（例外エラー） ver12.0");
+    res.status(500).send("取得に失敗しました（例外エラー） ver13.0");
   }
 }
