@@ -1,83 +1,26 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Viewer</title>
-<style>
-  body { margin:0; background:#111; color:white; font-family:sans-serif; }
-  #local {
-    width:300px;
-    background:black;
-  }
-  #status {
-    padding:10px;
-    background:#222;
-    font-size:14px;
-  }
-  .ok { color:#4CAF50; }
-  .ng { color:#F44336; }
-</style>
-</head>
-<body>
-
-<div id="status">
-  HTML読み込み: <span id="htmlStatus" class="ok">OK</span><br>
-  JS読み込み: <span id="jsStatus" class="ng">NG</span><br>
-  offer送信: <span id="offerStatus" class="ng">NG</span><br>
-  answer受信: <span id="answerStatus" class="ng">NG</span><br>
-  WebRTC接続: <span id="rtcStatus" class="ng">NG</span>
-</div>
-
-<video id="local" autoplay muted></video>
-
-<script>
-document.getElementById("jsStatus").textContent = "OK";
-document.getElementById("jsStatus").className = "ok";
-
 const pc = new RTCPeerConnection();
-const channel = pc.createDataChannel("control");
 
-pc.onconnectionstatechange = () => {
-  if (pc.connectionState === "connected") {
-    document.getElementById("rtcStatus").textContent = "OK";
-    document.getElementById("rtcStatus").className = "ok";
-  }
+pc.ontrack = e => {
+  document.getElementById("remote").srcObject = e.streams[0];
 };
 
-async function start() {
-  const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-  document.getElementById("local").srcObject = stream;
-  stream.getTracks().forEach(t => pc.addTrack(t, stream));
+async function poll() {
+  const res = await fetch("/api/signal");
+  const data = await res.json();
 
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
+  if (data.offer && !pc.currentRemoteDescription) {
+    await pc.setRemoteDescription(data.offer);
 
-  await fetch("/api/signal?action=offer", {
-    method: "POST",
-    body: JSON.stringify(offer)
-  });
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
 
-  document.getElementById("offerStatus").textContent = "OK";
-  document.getElementById("offerStatus").className = "ok";
+    await fetch("/api/signal?action=answer", {
+      method: "POST",
+      body: JSON.stringify(answer)
+    });
+  }
 
-  // ★ answer を待つ
-  const waitAnswer = async () => {
-    const res = await fetch("/api/signal");
-    const data = await res.json();
-
-    if (data.answer) {
-      await pc.setRemoteDescription(data.answer);
-      document.getElementById("answerStatus").textContent = "OK";
-      document.getElementById("answerStatus").className = "ok";
-    } else {
-      requestAnimationFrame(waitAnswer);
-    }
-  };
-
-  waitAnswer();
+  requestAnimationFrame(poll);
 }
 
-start();
-</script>
-</body>
-</html>
+poll();
