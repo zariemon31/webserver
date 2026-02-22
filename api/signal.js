@@ -1,27 +1,27 @@
-import { put, del, get } from '@vercel/blob';
+import { put, del, get } from '@vercel/blob/node';
 
-export const config = {
-  runtime: 'edge'
-};
-
-export default async function handler(req) {
-  const url = new URL(req.url);
+export default async function handler(req, res) {
+  const url = new URL(req.url, `http://${req.headers.host}`);
   const action = url.searchParams.get("action");
 
   if (req.method === "POST") {
-    const body = await req.text();
+    const body = await new Promise(resolve => {
+      let data = "";
+      req.on("data", chunk => data += chunk);
+      req.on("end", () => resolve(data));
+    });
 
     if (action === "offer") {
       await put("offer.json", body, { contentType: "application/json" });
       await del("answer.json");
       await del("candidates_viewer.json");
       await del("candidates_client.json");
-      return new Response("ok");
+      return res.status(200).send("ok");
     }
 
     if (action === "answer") {
       await put("answer.json", body, { contentType: "application/json" });
-      return new Response("ok");
+      return res.status(200).send("ok");
     }
 
     if (action === "candidate_viewer") {
@@ -29,7 +29,7 @@ export default async function handler(req) {
       const arr = old ? JSON.parse(await old.text()) : [];
       arr.push(JSON.parse(body));
       await put("candidates_viewer.json", JSON.stringify(arr), { contentType: "application/json" });
-      return new Response("ok");
+      return res.status(200).send("ok");
     }
 
     if (action === "candidate_client") {
@@ -37,7 +37,7 @@ export default async function handler(req) {
       const arr = old ? JSON.parse(await old.text()) : [];
       arr.push(JSON.parse(body));
       await put("candidates_client.json", JSON.stringify(arr), { contentType: "application/json" });
-      return new Response("ok");
+      return res.status(200).send("ok");
     }
   }
 
@@ -46,7 +46,7 @@ export default async function handler(req) {
   const candidates_viewer = await get("candidates_viewer.json").catch(() => null);
   const candidates_client = await get("candidates_client.json").catch(() => null);
 
-  return Response.json({
+  return res.json({
     offer: offer ? JSON.parse(await offer.text()) : null,
     answer: answer ? JSON.parse(await answer.text()) : null,
     candidates_viewer: candidates_viewer ? JSON.parse(await candidates_viewer.text()) : [],
