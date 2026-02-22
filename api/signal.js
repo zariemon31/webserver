@@ -4,7 +4,6 @@ export default async function handler(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const action = url.searchParams.get("action");
 
-  // POST
   if (req.method === "POST") {
     const body = await new Promise(resolve => {
       let data = "";
@@ -42,7 +41,6 @@ export default async function handler(req, res) {
     }
   }
 
-  // GET
   const offer = await get("offer.json").catch(() => null);
   const answer = await get("answer.json").catch(() => null);
   const candidates_viewer = await get("candidates_viewer.json").catch(() => null);
