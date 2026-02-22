@@ -3,14 +3,46 @@
 <head>
 <meta charset="UTF-8">
 <title>Viewer</title>
+<style>
+  body { margin:0; background:#111; color:white; font-family:sans-serif; }
+  #local {
+    width:300px;
+    background:black;
+  }
+  #status {
+    padding:10px;
+    background:#222;
+    font-size:14px;
+  }
+  .ok { color:#4CAF50; }
+  .ng { color:#F44336; }
+</style>
 </head>
 <body>
-<h2>Viewer</h2>
-<video id="local" autoplay muted style="width:300px;"></video>
+
+<div id="status">
+  HTML読み込み: <span id="htmlStatus" class="ok">OK</span><br>
+  JS読み込み: <span id="jsStatus" class="ng">NG</span><br>
+  offer送信: <span id="offerStatus" class="ng">NG</span><br>
+  answer受信: <span id="answerStatus" class="ng">NG</span><br>
+  WebRTC接続: <span id="rtcStatus" class="ng">NG</span>
+</div>
+
+<video id="local" autoplay muted></video>
 
 <script>
+document.getElementById("jsStatus").textContent = "OK";
+document.getElementById("jsStatus").className = "ok";
+
 const pc = new RTCPeerConnection();
 const channel = pc.createDataChannel("control");
+
+pc.onconnectionstatechange = () => {
+  if (pc.connectionState === "connected") {
+    document.getElementById("rtcStatus").textContent = "OK";
+    document.getElementById("rtcStatus").className = "ok";
+  }
+};
 
 async function start() {
   const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
@@ -25,12 +57,18 @@ async function start() {
     body: JSON.stringify(offer)
   });
 
+  document.getElementById("offerStatus").textContent = "OK";
+  document.getElementById("offerStatus").className = "ok";
+
+  // ★ answer を待つ
   const waitAnswer = async () => {
     const res = await fetch("/api/signal");
     const data = await res.json();
 
     if (data.answer) {
       await pc.setRemoteDescription(data.answer);
+      document.getElementById("answerStatus").textContent = "OK";
+      document.getElementById("answerStatus").className = "ok";
     } else {
       requestAnimationFrame(waitAnswer);
     }
