@@ -12,12 +12,13 @@
 const pc = new RTCPeerConnection();
 const channel = pc.createDataChannel("control");
 
-navigator.mediaDevices.getDisplayMedia({ video: true }).then(stream => {
+async function start() {
+  // ① 先に画面共有を「待つ」
+  const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
   document.getElementById("local").srcObject = stream;
   stream.getTracks().forEach(t => pc.addTrack(t, stream));
-});
 
-async function start() {
+  // ② そのあとで offer を作る
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
 
