@@ -1,1 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>vercel client</title>
+</head>
+<body>
+<h2>Remote Controller</h2>
+<video id="remote" autoplay style="width:100%;"></video>
 
+<script>
+const pc = new RTCPeerConnection();
+let channel;
+
+// 1. Vercel の API から Offer/Answer を取りに行く
+async function poll() {
+  const res = await fetch("/api/state");
+  const data = await res.json();
+
+  // Offer を受け取ったら Answer を返す
+  if (data.offer && !pc.currentRemoteDescription) {
+    await pc.setRemoteDescription(data.offer);
+
+    pc.ontrack = e => {
+      document.getElementById("remote").srcObject = e.streams[0];
+    };
+
+    pc.ondatachannel = e => {
+      channel = e.channel;
+    };
+
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+
+    await fetch("/api/answer", {
+      method: "POST",
+      body: JSON.stringify(answer)
+    });
+  }
+
+  requestAnimationFrame(poll);
+}
+
+poll();
+</script>
+</body>
+</html>
