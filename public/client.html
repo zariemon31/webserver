@@ -6,7 +6,9 @@
 </head>
 <body>
 <h2>Remote Controller</h2>
-<video id="remote" autoplay playsinline style="width:100%;"></video>
+
+<!-- ★ ここが映像が出る枠 ★ -->
+<video id="remote" autoplay playsinline style="width:100%; background:black;"></video>
 
 <script>
 const pc = new RTCPeerConnection();
@@ -15,16 +17,14 @@ async function poll() {
   const res = await fetch("/api/signal");
   const data = await res.json();
 
-  // viewer から offer が来たら受け取る
   if (data.offer && !pc.currentRemoteDescription) {
     await pc.setRemoteDescription(data.offer);
 
-    // 映像を受け取ったら <video> に表示
+    // ★ 映像を枠に入れる処理 ★
     pc.ontrack = e => {
       document.getElementById("remote").srcObject = e.streams[0];
     };
 
-    // answer を返す
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
 
