@@ -1,20 +1,27 @@
-document.getElementById("jsStatus").textContent = "OK";
-document.getElementById("jsStatus").className = "ok";
+document.getElementById("js").textContent = "OK";
+document.getElementById("js").className = "ok";
 
 const pc = new RTCPeerConnection();
 
-// ★ 映像を受信したら表示
-pc.ontrack = e => {
-  document.getElementById("remote").srcObject = e.streams[0];
-  document.getElementById("videoStatus").textContent = "OK";
-  document.getElementById("videoStatus").className = "ok";
+pc.onicecandidate = e => {
+  if (e.candidate) {
+    fetch("/api/signal?action=candidate_client", {
+      method: "POST",
+      body: JSON.stringify(e.candidate)
+    });
+  }
 };
 
-// ★ WebRTC 接続状態を監視
+pc.ontrack = e => {
+  document.getElementById("remote").srcObject = e.streams[0];
+  document.getElementById("video").textContent = "OK";
+  document.getElementById("video").className = "ok";
+};
+
 pc.onconnectionstatechange = () => {
   if (pc.connectionState === "connected") {
-    document.getElementById("rtcStatus").textContent = "OK";
-    document.getElementById("rtcStatus").className = "ok";
+    document.getElementById("rtc").textContent = "OK";
+    document.getElementById("rtc").className = "ok";
   }
 };
 
@@ -32,6 +39,12 @@ async function poll() {
       method: "POST",
       body: JSON.stringify(answer)
     });
+  }
+
+  if (data.candidates_viewer) {
+    for (const c of data.candidates_viewer) {
+      pc.addIceCandidate(c);
+    }
   }
 
   requestAnimationFrame(poll);
