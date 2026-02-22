@@ -1,7 +1,13 @@
 export default async function handler(req, res) {
-  console.log("proxy.js ver9.0 実行");
+  const targetUrl = req.query.url || "https://www.yahoo.co.jp/";
+  console.log("proxy.js ver11.0:", targetUrl);
 
-  const targetUrl = req.query.url || "https://ja.wikipedia.org/wiki/メインページ";
+  let urlObj;
+  try {
+    urlObj = new URL(targetUrl);
+  } catch (e) {
+    return res.status(400).send("不正な URL です ver11.0");
+  }
 
   try {
     const response = await fetch(targetUrl, {
@@ -12,44 +18,63 @@ export default async function handler(req, res) {
     });
 
     if (!response.ok) {
-      return res.status(500).send("取得に失敗しました（レスポンスエラー） ver9.0");
+      return res.status(500).send("取得に失敗しました（レスポンスエラー） ver11.0");
     }
 
-    let html = await response.text();
     const contentType = response.headers.get("content-type") || "";
+    res.setHeader("Content-Type", contentType);
 
-    // HTML 以外（画像・CSS・JS）はそのまま返す
+    // HTML 以外（画像・CSS・JS・フォントなど）はそのまま返す
     if (!contentType.includes("text/html")) {
       const buffer = await response.arrayBuffer();
-      res.setHeader("Content-Type", contentType);
       return res.status(200).send(Buffer.from(buffer));
     }
 
-    // ① 相対リンクを proxy に書き換え
+    let html = await response.text();
+    const origin = urlObj.origin; // https://www.yahoo.co.jp
+
+    // -------------------------
+    // ① href="/xxx" → 絶対URL → proxy
+    // -------------------------
     html = html.replace(/href="\/([^"]*)"/g, (match, path) => {
-      const newUrl = "https://ja.wikipedia.org/" + path;
-      return `href="/api/proxy?url=${encodeURIComponent(newUrl)}"`;
+      const abs = origin + "/" + path;
+      return `href="/api/proxy?url=${encodeURIComponent(abs)}"`;
     });
 
-    // ② 絶対リンクも proxy に書き換え
-    html = html.replace(/href="https:\/\/([^"]*)"/g, (match, url) => {
-      return `href="/api/proxy?url=${encodeURIComponent("https://" + url)}"`;
+    // -------------------------
+    // ② href="//xxx" → https://xxx → proxy
+    // -------------------------
+    html = html.replace(/href="\/\/([^"]*)"/g, (match, host) => {
+      const abs = "https://" + host;
+      return `href="/api/proxy?url=${encodeURIComponent(abs)}"`;
     });
 
-    // ③ 画像 src="//..." を https:// に変換
-    html = html.replace(/src="\/\/([^"]*)"/g, (match, url) => {
-      return `src="https://${url}"`;
+    // -------------------------
+    // ③ href="https://xxx" → proxy
+    // -------------------------
+    html = html.replace(/href="https?:\/\/([^"]*)"/g, (match) => {
+      const url = match.slice(6, -1); // href=" と " を除く
+      return `href="/api/proxy?url=${encodeURIComponent(url)}"`;
     });
 
-    // ④ 画像 src="/..." を絶対 URL に変換
+    // -------------------------
+    // ④ 画像 src="/xxx" → 絶対URL
+    // -------------------------
     html = html.replace(/src="\/([^"]*)"/g, (match, path) => {
-      return `src="https://ja.wikipedia.org/${path}"`;
+      return `src="${origin}/${path}"`;
     });
 
-    res.setHeader("Content-Type", "text/html; charset=utf-8");
-    res.status(200).send(`<!-- proxy.js ver9.0 -->\n${html}`);
+    // -------------------------
+    // ⑤ 画像 src="//xxx" → https://xxx
+    // -------------------------
+    html = html.replace(/src="\/\/([^"]*)"/g, (match, host) => {
+      return `src="https://${host}"`;
+    });
+
+    res.status(200).send(`<!-- proxy.js ver11.0 -->\n${html}`);
 
   } catch (err) {
-    res.status(500).send("取得に失敗しました（例外エラー） ver9.0");
+    console.error(err);
+    res.status(500).send("取得に失敗しました（例外エラー） ver11.0");
   }
 }
