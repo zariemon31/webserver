@@ -6,16 +6,16 @@
 </head>
 <body>
 <h2>Remote Controller</h2>
-<video id="remote" autoplay style="width:100%;"></video>
+<video id="remote" autoplay playsinline style="width:100%;"></video>
 
 <script>
 const pc = new RTCPeerConnection();
-let channel;
 
 async function poll() {
   const res = await fetch("/api/signal");
   const data = await res.json();
 
+  // viewer が offer を送ってきたら受け取る
   if (data.offer && !pc.currentRemoteDescription) {
     await pc.setRemoteDescription(data.offer);
 
@@ -23,10 +23,7 @@ async function poll() {
       document.getElementById("remote").srcObject = e.streams[0];
     };
 
-    pc.ondatachannel = e => {
-      channel = e.channel;
-    };
-
+    // answer を返す
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
 
