@@ -1,26 +1,39 @@
-const pc = new RTCPeerConnection();
-
-pc.ontrack = e => {
-  document.getElementById("remote").srcObject = e.streams[0];
-};
-
-async function poll() {
-  const res = await fetch("/api/signal");
-  const data = await res.json();
-
-  if (data.offer && !pc.currentRemoteDescription) {
-    await pc.setRemoteDescription(data.offer);
-
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
-
-    await fetch("/api/signal?action=answer", {
-      method: "POST",
-      body: JSON.stringify(answer)
-    });
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Remote Controller</title>
+<style>
+  body { margin:0; background:#111; color:white; font-family:sans-serif; }
+  #remote {
+    width:100vw;
+    height:80vh;
+    background:black;
+    object-fit:contain;
   }
+  #status {
+    padding:10px;
+    background:#222;
+    font-size:14px;
+  }
+  .ok { color:#4CAF50; }
+  .ng { color:#F44336; }
+</style>
+</head>
+<body>
 
-  requestAnimationFrame(poll);
-}
+<div id="status">
+  HTML読み込み: <span id="htmlStatus" class="ok">OK</span><br>
+  JS読み込み: <span id="jsStatus" class="ng">NG</span><br>
+  WebRTC接続: <span id="rtcStatus" class="ng">NG</span><br>
+  映像受信: <span id="videoStatus" class="ng">NG</span>
+</div>
 
-poll();
+<!-- ★ 映像が出る枠 ★ -->
+<video id="remote" autoplay playsinline></video>
+
+<!-- ★ client.js を読み込む ★ -->
+<script src="client.js"></script>
+
+</body>
+</html>
