@@ -1,47 +1,55 @@
-let offer = null;
-let answer = null;
+import { put, del, get } from '@vercel/blob';
 
-let candidates_viewer = [];
-let candidates_client = [];
+export const config = {
+  runtime: 'edge'
+};
 
 export default async function handler(req) {
   const url = new URL(req.url);
   const action = url.searchParams.get("action");
 
-  const body = req.method === "POST" ? await req.text() : null;
+  if (req.method === "POST") {
+    const body = await req.text();
 
-  // viewer → offer を送る
-  if (action === "offer") {
-    offer = JSON.parse(body);
-    answer = null;
-    candidates_viewer = [];
-    candidates_client = [];
-    return new Response("ok");
+    if (action === "offer") {
+      await put("offer.json", body, { contentType: "application/json" });
+      await del("answer.json");
+      await del("candidates_viewer.json");
+      await del("candidates_client.json");
+      return new Response("ok");
+    }
+
+    if (action === "answer") {
+      await put("answer.json", body, { contentType: "application/json" });
+      return new Response("ok");
+    }
+
+    if (action === "candidate_viewer") {
+      const old = await get("candidates_viewer.json").catch(() => null);
+      const arr = old ? JSON.parse(await old.text()) : [];
+      arr.push(JSON.parse(body));
+      await put("candidates_viewer.json", JSON.stringify(arr), { contentType: "application/json" });
+      return new Response("ok");
+    }
+
+    if (action === "candidate_client") {
+      const old = await get("candidates_client.json").catch(() => null);
+      const arr = old ? JSON.parse(await old.text()) : [];
+      arr.push(JSON.parse(body));
+      await put("candidates_client.json", JSON.stringify(arr), { contentType: "application/json" });
+      return new Response("ok");
+    }
   }
 
-  // client → answer を送る
-  if (action === "answer") {
-    answer = JSON.parse(body);
-    return new Response("ok");
-  }
+  const offer = await get("offer.json").catch(() => null);
+  const answer = await get("answer.json").catch(() => null);
+  const candidates_viewer = await get("candidates_viewer.json").catch(() => null);
+  const candidates_client = await get("candidates_client.json").catch(() => null);
 
-  // viewer → ICE candidate を送る
-  if (action === "candidate_viewer") {
-    candidates_viewer.push(JSON.parse(body));
-    return new Response("ok");
-  }
-
-  // client → ICE candidate を送る
-  if (action === "candidate_client") {
-    candidates_client.push(JSON.parse(body));
-    return new Response("ok");
-  }
-
-  // 状態を返す
   return Response.json({
-    offer,
-    answer,
-    candidates_viewer,
-    candidates_client
+    offer: offer ? JSON.parse(await offer.text()) : null,
+    answer: answer ? JSON.parse(await answer.text()) : null,
+    candidates_viewer: candidates_viewer ? JSON.parse(await candidates_viewer.text()) : [],
+    candidates_client: candidates_client ? JSON.parse(await candidates_client.text()) : []
   });
 }
