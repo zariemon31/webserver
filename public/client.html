@@ -15,7 +15,6 @@ async function poll() {
   const res = await fetch("/api/signal");
   const data = await res.json();
 
-  // viewer が offer を送ってきたら受け取る
   if (data.offer && !pc.currentRemoteDescription) {
     await pc.setRemoteDescription(data.offer);
 
@@ -23,7 +22,6 @@ async function poll() {
       document.getElementById("remote").srcObject = e.streams[0];
     };
 
-    // answer を返す
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
 
