@@ -12,19 +12,11 @@
 const pc = new RTCPeerConnection();
 const channel = pc.createDataChannel("control");
 
-channel.onmessage = e => {
-  const data = JSON.parse(e.data);
-  // ★ ここでマウス操作を受け取る（必要なら追加）
-  console.log("control:", data);
-};
-
 async function start() {
-  // ① 画面共有を待つ
   const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
   document.getElementById("local").srcObject = stream;
   stream.getTracks().forEach(t => pc.addTrack(t, stream));
 
-  // ② offer を作る
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
 
@@ -33,7 +25,6 @@ async function start() {
     body: JSON.stringify(offer)
   });
 
-  // ③ answer を待つ
   const waitAnswer = async () => {
     const res = await fetch("/api/signal");
     const data = await res.json();
